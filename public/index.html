@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>BROADSIDE HYPERION — Bridge Console</title>
+  <meta name="theme-color" content="#0b0f19">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HYPERION">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-180.png">
+  <link rel="stylesheet" href="/css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/vendor/three.module.js"
+    }
+  }
+  </script>
+</head>
+<body class="theme-dark">
+
+  <!-- TOP HEADER HUD BAR -->
+  <header id="top-hud-bar" class="hud-bar">
+    <div class="hud-section hud-left">
+      <div class="hud-brand">
+        <span class="hud-title">BROADSIDE</span>
+        <span class="hud-subtitle">HYPERION</span>
+      </div>
+      <div class="ship-callsign-badge">
+        <span class="badge-label">SHIP:</span>
+        <span id="hud-ship-name" class="badge-value text-team-alpha">UNS HYPERION</span>
+      </div>
+      <div class="hull-meter-block">
+        <div class="hull-meter-header">
+          <span class="meter-label">HULL INTEGRITY</span>
+          <span id="hud-hull-text" class="meter-value">1000 / 1000</span>
+        </div>
+        <div class="meter-track">
+          <div id="hud-hull-bar" class="meter-fill fill-hull" style="width: 100%;"></div>
+        </div>
+      </div>
+      <div id="hud-shields-summary" class="shields-mini-grid">
+        <div class="shield-quad" data-quad="fore"><span class="q-label">F</span><span class="q-val">100</span></div>
+        <div class="shield-quad" data-quad="port"><span class="q-label">P</span><span class="q-val">100</span></div>
+        <div class="shield-quad" data-quad="starboard"><span class="q-label">S</span><span class="q-val">100</span></div>
+        <div class="shield-quad" data-quad="aft"><span class="q-label">A</span><span class="q-val">100</span></div>
+      </div>
+    </div>
+
+    <!-- Center Alerts & Broadcast Banners -->
+    <div class="hud-section hud-center">
+      <div id="kill-cam-banner" class="alert-banner killcam-banner hidden">
+        <span class="alert-pulse"></span>
+        <span class="alert-text">CRITICAL SYSTEM FAILURE — KILLING BLOW TIME DILATION</span>
+      </div>
+      <div id="hyperspace-status-banner" class="alert-banner hyperspace-banner hidden" role="status">
+        <span class="alert-pulse"></span>
+        <span id="hyperspace-banner-text" class="alert-text"></span>
+      </div>
+      <div id="dampening-field-banner" class="alert-banner dampening-banner hidden" role="status">
+        <span class="alert-pulse"></span>
+        <span id="dampening-banner-text" class="alert-text">DAMPENING FIELD — THRUST &amp; SPIN DAMPENED</span>
+      </div>
+    </div>
+
+    <!-- Right Station Switcher & Lobby Controls -->
+    <div class="hud-section hud-right">
+      <nav class="station-switcher-nav" aria-label="Station Selection">
+        <button id="btn-station-helm" class="station-tab-btn active" data-station="helm" type="button">
+          <span class="tab-code">HLM</span>
+          <span class="tab-title">HELM</span>
+        </button>
+        <button id="btn-station-weapons" class="station-tab-btn" data-station="weapons" type="button">
+          <span class="tab-code">WPN</span>
+          <span class="tab-title">WEAPONS</span>
+        </button>
+        <button id="btn-station-engineer" class="station-tab-btn" data-station="engineer" type="button">
+          <span class="tab-code">ENG</span>
+          <span class="tab-title">ENGINEER</span>
+        </button>
+      </nav>
+      <div class="hud-actions">
+        <button id="btn-open-lobby" class="btn-hud-action active" type="button">DRYDOCK / LOBBY</button>
+        <a href="/spectate" target="_blank" rel="noopener" class="btn-hud-link">SPECTATE</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN TACTICAL VIEWPORT -->
+  <main id="viewport-container" class="tactical-viewport">
+    <canvas id="space-canvas"></canvas>
+
+    <!-- ENEMY EDGE INDICATOR (Projected onto viewport edge) -->
+    <div id="enemy-edge-indicator" class="enemy-edge-indicator hidden" aria-hidden="true">
+      <div class="edge-arrow-icon"></div>
+      <span id="enemy-edge-dist" class="edge-dist-tag">0m</span>
+    </div>
+
+    <!-- PRE-FLIGHT / STANDBY BRIDGE BANNER -->
+    <div id="pregame-station-banner" class="pregame-station-banner">
+      <div class="pregame-banner-info">
+        <span class="pregame-status-dot"></span>
+        <span id="pregame-banner-text" class="pregame-banner-text">PRE-FLIGHT STATION CHECK — TAKE YOUR STATIONS &amp; CONFIGURE SYSTEMS</span>
+      </div>
+      <div class="pregame-banner-actions">
+        <button id="btn-bridge-drydock" class="btn-bridge-secondary" type="button">DRYDOCK / ROLES</button>
+        <button id="btn-bridge-launch" class="btn-bridge-primary" type="button">LAUNCH MATCH</button>
+      </div>
+    </div>
+
+    <!-- INSTANT REPLAY HUD BANNER -->
+    <div id="replay-hud-banner" class="replay-hud-banner hidden" role="status" aria-live="polite">
+      <div class="replay-banner-label">INSTANT REPLAY — FINAL IMPACT</div>
+      <div id="replay-progress-track" class="replay-progress-track">
+        <div id="replay-progress-fill" class="replay-progress-fill"></div>
+      </div>
+    </div>
+
+    <!-- BATTLE OUTCOME OVERLAY -->
+    <div id="battle-outcome-overlay" class="battle-outcome-overlay hidden" role="status" aria-live="assertive">
+      <div id="battle-outcome-banner" class="battle-outcome-banner glass-card">
+        <div id="battle-outcome-kicker" class="outcome-kicker">COMBAT ACTION CONCLUDED</div>
+        <h1 id="battle-outcome-title" class="outcome-title"></h1>
+        <div id="battle-outcome-subtitle" class="outcome-subtitle"></div>
+        <div class="outcome-actions">
+          <button id="btn-outcome-rematch" class="btn-tactical outcome-btn" type="button">PLAY AGAIN</button>
+          <button id="btn-outcome-drydock" class="btn-tactical outcome-btn" type="button">DRYDOCK / ROLES</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DIEGETIC EXTERNAL OPTICS BLACKOUT OVERLAY -->
+    <div id="hyperspace-blackout-overlay" class="hyperspace-blackout-overlay hidden" aria-live="polite">
+      <div class="blackout-title" id="hyperspace-blackout-title">EXTERNAL OPTICS OFFLINE — SHIP REBOOTING</div>
+      <div class="blackout-progress-track">
+        <div class="blackout-progress-fill" id="hyperspace-blackout-bar"></div>
+      </div>
+      <div class="blackout-timers" id="hyperspace-blackout-timers">VIEWS / DRIVE / RCS: 4.0s · ALL SYSTEMS: 7.0s</div>
+    </div>
+
+    <!-- DIEGETIC STATION CONSOLES (Overlayed on Viewport) -->
+
+    <!-- 1. HELM CONSOLE -->
+    <section id="console-helm" class="station-console active" aria-label="Helm Station Console">
+      <div class="console-hud helm-hud">
+        <!-- Helm Arena Mini-Map Radar Card -->
+        <div id="helm-minimap-card" class="helm-minimap-card glass-card">
+          <div class="card-header">
+            <span class="panel-tag">RAD-01</span>
+            <span class="panel-title">SECTOR RADAR</span>
+          </div>
+          <div class="minimap-body">
+            <canvas id="helm-minimap-canvas" width="160" height="160"></canvas>
+          </div>
+        </div>
+
+        <!-- Helm Engine Throttle Panel -->
+        <div id="helm-throttle-panel" class="hud-panel glass-card">
+          <div class="card-header">
+            <span class="panel-tag">THR-01</span>
+            <span class="panel-title">MAIN THROTTLE</span>
+            <span id="helm-throttle-value" class="panel-val">0%</span>
+          </div>
+          <div class="throttle-body">
+            <input id="helm-throttle-slider" type="range" min="0" max="100" step="1" value="0" aria-label="Main Engine Throttle" />
+            <div class="throttle-btn-row">
+              <button id="btn-throttle-zero" class="btn-throttle" type="button">CUT</button>
+              <button id="btn-throttle-max" class="btn-throttle" type="button">MAX</button>
+            </div>
+            <div class="throttle-hint">[- CTRL / + SHF]</div>
+          </div>
+        </div>
+
+        <!-- Helm Multi-Angle Vessel PiP Panel -->
+        <div id="helm-pip-panel" class="helm-pip-panel">
+          <div class="pip-slot" data-pip="dorsal"><span class="pip-label">DORSAL</span></div>
+          <div class="pip-slot" data-pip="side"><span class="pip-label">PORT</span></div>
+          <div class="pip-slot" data-pip="stern"><span class="pip-label">STERN</span></div>
+        </div>
+
+        <!-- Helm Enemy Vector HUD Overlay -->
+        <div id="helm-enemy-vector" class="enemy-vector-card glass-card">
+          <div class="enemy-vector-head">
+            <span class="panel-tag">TAC-01</span>
+            <span id="helm-enemy-status" class="enemy-vector-status">TRACKING</span>
+          </div>
+          <div class="enemy-vector-body">
+            <div class="enemy-vector-arrow-wrap" aria-hidden="true">
+              <div id="helm-enemy-arrow" class="enemy-vector-arrow"></div>
+            </div>
+            <div class="enemy-vector-readouts">
+              <div id="helm-enemy-bearing" class="enemy-vector-line">BRG ---° | ELV +0° | RNG ----m</div>
+              <div id="helm-enemy-velocity" class="enemy-vector-line">VEL --- m/s | HDG ---° | CLS --- m/s</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Telemetry Gauges -->
+        <div class="telemetry-panel telemetry-top-left glass-card">
+          <div class="card-header">
+            <span class="panel-tag">SYS-01</span>
+            <span class="panel-title">KINEMATIC TELEMETRY</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="t-label">VELOCITY:</span>
+            <span id="helm-speed" class="t-val">0.0 m/s</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="t-label">HEADING:</span>
+            <span id="helm-heading" class="t-val">000.0°</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="t-label">ANG VEL (&omega;):</span>
+            <span id="helm-omega" class="t-val">0.000 rad/s</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="t-label">ROLL (&phi; / &omega;x):</span>
+            <span id="helm-roll-telemetry" class="t-val">0.0° (0.00 rad/s)</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="t-label">PITCH:</span>
+            <span id="helm-pitch" class="t-val">+0.0°</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="t-label">ELEV Z:</span>
+            <span id="helm-alt" class="t-val">+0m</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="t-label">THROTTLE:</span>
+            <span id="helm-throttle" class="t-val">0%</span>
+          </div>
+        </div>
+
+        <!-- 10 RCS Thrusters Status Grid -->
+        <div class="telemetry-panel rcs-panel glass-card">
+          <div class="card-header">
+            <span class="panel-tag">SYS-02</span>
+            <span class="panel-title">RCS THRUSTER NOZZLES</span>
+          </div>
+          <div class="rcs-grid">
+            <div id="rcs-bowPort" class="rcs-pill nominal" data-nozzle="bowPort">
+              <span class="rcs-name">BOW-PORT</span>
+              <span class="rcs-state">100%</span>
+            </div>
+            <div id="rcs-bowStarboard" class="rcs-pill nominal" data-nozzle="bowStarboard">
+              <span class="rcs-name">BOW-STBD</span>
+              <span class="rcs-state">100%</span>
+            </div>
+            <div id="rcs-sternPort" class="rcs-pill nominal" data-nozzle="sternPort">
+              <span class="rcs-name">STERN-PORT</span>
+              <span class="rcs-state">100%</span>
+            </div>
+            <div id="rcs-sternStarboard" class="rcs-pill nominal" data-nozzle="sternStarboard">
+              <span class="rcs-name">STERN-STBD</span>
+              <span class="rcs-state">100%</span>
+            </div>
+            <div id="rcs-dorsalRoll" class="rcs-pill nominal" data-nozzle="dorsalRoll">
+              <span class="rcs-name">DORSAL-ROLL</span>
+              <span class="rcs-state">100%</span>
+            </div>
+            <div id="rcs-ventralRoll" class="rcs-pill nominal" data-nozzle="ventralRoll">
+              <span class="rcs-name">VENTRAL-ROLL</span>
+              <span class="rcs-state">100%</span>
+            </div>
+            <div id="rcs-bow-dorsal" class="rcs-pill nominal" data-nozzle="bowDorsal">
+              <span class="rcs-name">BOW-DORS</span>
+              <span class="rcs-state">100%</span>
+            </div>
+            <div id="rcs-bow-ventral" class="rcs-pill nominal" data-nozzle="bowVentral">
+              <span class="rcs-name">BOW-VENT</span>
+              <span class="rcs-state">100%</span>
+            </div>
+            <div id="rcs-stern-dorsal" class="rcs-pill nominal" data-nozzle="sternDorsal">
+              <span class="rcs-name">STERN-DORS</span>
+              <span class="rcs-state">100%</span>
+            </div>
+            <div id="rcs-stern-ventral" class="rcs-pill nominal" data-nozzle="sternVentral">
+              <span class="rcs-name">STERN-VENT</span>
+              <span class="rcs-state">100%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Helm Controls: SAS, Physical Roll & Auto-Orient Action Bar -->
+        <div class="helm-actions-bar glass-card">
+          <!-- Physical Roll RCS & SAS Buttons -->
+          <button id="btn-toggle-sas" class="btn-tactical sas-btn active" type="button">
+            <span class="btn-sub">STABILITY ASSIST [Z]</span>
+            <span class="btn-main">SAS ACTIVE</span>
+          </button>
+          <button id="btn-roll-port" class="btn-tactical roll-btn" type="button">
+            <span class="btn-sub">VENTRAL RCS [R]</span>
+            <span class="btn-main">ROLL PORT</span>
+          </button>
+          <button id="btn-stop-roll" class="btn-tactical roll-btn" type="button">
+            <span class="btn-sub">ROLL DAMPER [X]</span>
+            <span class="btn-main">STOP ROLL</span>
+          </button>
+          <button id="btn-roll-starboard" class="btn-tactical roll-btn" type="button">
+            <span class="btn-sub">DORSAL RCS [T]</span>
+            <span class="btn-main">ROLL STBD</span>
+          </button>
+
+          <!-- Automatic Orientation Flight Computer Buttons -->
+          <button id="btn-orient-prograde" class="btn-tactical orient-btn" data-orient="prograde" type="button">
+            <span class="btn-sub">AUTO-ORIENT [1]</span>
+            <span class="btn-main">FACE MOTION</span>
+          </button>
+          <button id="btn-orient-retrograde" class="btn-tactical orient-btn" data-orient="retrograde" type="button">
+            <span class="btn-sub">AUTO-ORIENT [2]</span>
+            <span class="btn-main">OPP. MOTION</span>
+          </button>
+          <button id="btn-orient-target" class="btn-tactical orient-btn" data-orient="target" type="button">
+            <span class="btn-sub">AUTO-ORIENT [3]</span>
+            <span class="btn-main">FACE ENEMY</span>
+          </button>
+          <button id="btn-orient-anti-target" class="btn-tactical orient-btn" data-orient="anti_target" type="button">
+            <span class="btn-sub">AUTO-ORIENT [4]</span>
+            <span class="btn-main">OPP. ENEMY</span>
+          </button>
+          <button id="btn-turn-and-burn" class="btn-tactical turn-burn-btn" type="button">
+            <span class="btn-sub">FLIP &amp; BRAKE [B]</span>
+            <span class="btn-main">TURN AND BURN</span>
+          </button>
+          <button id="btn-hyperspace" class="btn-tactical btn-hyperspace" type="button" title="Engage Hyperspace Jump [H]">HYPERSPACE [H]</button>
+        </div>
+
+        <!-- Multi-Touch Dual Virtual Thumbsticks (For Tablets & Mobile) -->
+        <div id="stick-left-zone" class="virtual-stick-zone stick-left" aria-label="Thrust and Strafe Joystick">
+          <div class="stick-base">
+            <div class="stick-crosshair"></div>
+            <div class="stick-knob"></div>
+          </div>
+          <span class="stick-label">TRANSLATION (WASD)</span>
+        </div>
+
+        <div id="stick-right-zone" class="virtual-stick-zone stick-right" aria-label="Steering and Torque Joystick">
+          <div class="stick-base">
+            <div class="stick-crosshair"></div>
+            <div class="stick-knob"></div>
+          </div>
+          <span class="stick-label">ROTATION (ARROWS)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. WEAPONS CONSOLE -->
+    <section id="console-weapons" class="station-console" aria-label="Weapons Station Console">
+      <div class="console-hud weapons-hud">
+        <!-- Center Gunner Reticle Overlay -->
+        <div id="weapons-reticle-overlay" class="weapons-reticle-overlay">
+          <div class="gunner-aim-reticle"></div>
+          <div id="railgun-barrel-reticle" class="railgun-barrel-reticle">
+            <div class="barrel-cross"></div>
+            <span id="railgun-reticle-status" class="reticle-status-tag">READY</span>
+          </div>
+        </div>
+
+        <!-- Weapons Enemy Vector HUD Overlay -->
+        <div id="weapons-enemy-vector" class="enemy-vector-card weapons-enemy-vector glass-card">
+          <div class="enemy-vector-head">
+            <span class="panel-tag">TAC-01</span>
+            <span id="weapons-enemy-status" class="enemy-vector-status">TRACKING</span>
+          </div>
+          <div class="enemy-vector-body">
+            <div class="enemy-vector-arrow-wrap" aria-hidden="true">
+              <div id="weapons-enemy-arrow" class="enemy-vector-arrow"></div>
+            </div>
+            <div class="enemy-vector-readouts">
+              <div id="weapons-enemy-bearing" class="enemy-vector-line">BRG ---° | ELV +0° | RNG ----m</div>
+              <div id="weapons-enemy-velocity" class="enemy-vector-line">VEL --- m/s | HDG ---° | CLS --- m/s</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weapons View Look Controller (Bottom-Left) -->
+        <div id="weapons-look-panel" class="weapons-look-panel glass-card">
+          <div class="card-header">
+            <span class="panel-tag">CAM-01</span>
+            <span class="panel-title">GUNNER FREE-LOOK</span>
+          </div>
+          <div class="look-controls-body">
+            <div id="weapons-look-stick-zone" class="virtual-stick-zone stick-weapons-look" aria-label="Gunner View Look Stick">
+              <div class="stick-base">
+                <div class="stick-crosshair"></div>
+                <div id="weapons-look-stick-knob" class="stick-knob"></div>
+              </div>
+              <span class="stick-label">VIEW PAN (A/D | W/S or &uarr;/&darr; Pitch)</span>
+            </div>
+            <div class="look-actions">
+              <span id="weapons-look-angle" class="look-angle-readout">LOOK +000° / +00°</span>
+              <span id="weapons-zoom-readout" class="weapons-zoom-readout">ZOOM 1.0x</span>
+              <button id="btn-recenter-view" class="btn-recenter" type="button">RECENTER [C]</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weapon Systems Compact Side Deck (Right Docked) -->
+        <div class="weapons-deck glass-card">
+          <div class="card-header">
+            <span class="panel-tag">ORD-01</span>
+            <span class="panel-title">BALLISTIC & ENERGY BATTERIES</span>
+          </div>
+
+          <!-- Weapon Mode Selector Buttons [1-4] -->
+          <div class="weapon-mode-selector">
+            <button id="btn-select-laser" class="btn-weapon-mode active" data-weapon-mode="laser" type="button">
+              <span class="mode-key">[1]</span> LASER
+            </button>
+            <button id="btn-select-railgun" class="btn-weapon-mode" data-weapon-mode="railgun" type="button">
+              <span class="mode-key">[2]</span> RAILGUN
+            </button>
+            <button id="btn-select-torpedo" class="btn-weapon-mode" data-weapon-mode="torpedo" type="button">
+              <span class="mode-key">[3]</span> TORP
+            </button>
+            <button id="btn-select-flak" class="btn-weapon-mode" data-weapon-mode="flak" type="button">
+              <span class="mode-key">[4]</span> FLAK
+            </button>
+          </div>
+
+          <!-- Hardware Status Badges (Railgun Slew & Stabilizer) -->
+          <div class="hardware-status-row">
+            <div class="status-badge-item">
+              <span class="badge-tag">RAILGUN:</span>
+              <span id="railgun-slew-status" class="status-badge nominal">ALIGNED</span>
+            </div>
+            <div class="status-badge-item">
+              <span class="badge-tag">STABILIZER:</span>
+              <span id="stabilizer-status" class="status-badge nominal">100% NOMINAL</span>
+            </div>
+          </div>
+
+          <!-- Pulse Lasers Heat & Firing -->
+          <div id="weapon-row-laser" class="weapon-row">
+            <div class="weapon-info">
+              <span class="w-name">TWIN PULSE LASERS</span>
+              <span id="laser-heat-text" class="w-status">HEAT: 0 / 100</span>
+            </div>
+            <div class="meter-track">
+              <div id="laser-heat-bar" class="meter-fill fill-heat" style="width: 0%;">
+                <div id="laser-heat-fill" class="meter-subfill"></div>
+              </div>
+            </div>
+            <button id="btn-fire-laser" class="btn-fire laser-btn" type="button">FIRE PULSE LASER</button>
+          </div>
+
+          <!-- Heavy Railgun Charge -->
+          <div id="weapon-row-railgun" class="weapon-row">
+            <div class="weapon-info">
+              <span class="w-name">HEAVY HYPERION RAILGUN</span>
+              <span class="w-status">900 m/s ARMOR-PIERCING</span>
+            </div>
+            <div class="meter-track">
+              <div id="railgun-charge-bar" class="meter-fill fill-charge" style="width: 0%;">
+                <div id="railgun-charge-fill" class="meter-subfill"></div>
+              </div>
+            </div>
+            <button id="btn-railgun-charge" class="btn-fire railgun-btn" type="button">CHARGE & RELEASE RAILGUN</button>
+          </div>
+
+          <!-- Homing Torpedo Magazine Rack -->
+          <div id="weapon-row-torpedo" class="weapon-row torpedo-row">
+            <div class="weapon-info">
+              <span class="w-name">HOMING TORPEDO RACK</span>
+              <span id="torpedo-count-text" class="w-status">MAGAZINE: <span id="torpedo-count">8</span> / 8</span>
+            </div>
+            <div id="torpedo-rack-display" class="torpedo-rack">
+              <!-- Dynamically populated torpedo icons -->
+            </div>
+            <select id="torpedo-mode-select" class="torpedo-mode-select hidden">
+              <option value="standard" selected>STANDARD</option>
+            </select>
+            <button id="btn-launch-torpedo" class="btn-fire torp-btn" type="button">LAUNCH TORPEDO</button>
+          </div>
+
+          <!-- Point-Defense Flak Burst -->
+          <div id="weapon-row-flak" class="weapon-row flak-row">
+            <div class="weapon-info">
+              <span class="w-name">POINT-DEFENSE FLAK</span>
+              <span class="w-status">200m CONCUSSIVE SHIELD</span>
+            </div>
+            <div id="flak-cooldown" class="flak-cooldown-text hidden">READY</div>
+            <button id="btn-fire-flak" class="btn-tactical flak-btn" type="button">DETONATE FLAK BURST</button>
+          </div>
+
+          <!-- Enemy Vessel Status: top-down diagram, shield strength, damaged systems -->
+          <div class="enemy-diagram-block">
+            <div class="target-select-label">ENEMY VESSEL STATUS</div>
+            <canvas id="enemy-diagram-canvas" class="enemy-diagram-canvas" width="240" height="190" aria-label="Top-down enemy ship diagram with shield strength"></canvas>
+            <ul id="enemy-damage-list" class="enemy-damage-list" aria-live="polite"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. ENGINEER CONSOLE -->
+    <section id="console-engineer" class="station-console" aria-label="Engineer Station Console">
+      <div class="engineer-hud">
+        <!-- Center Interactive 10x10 Conduit Grid Canvas -->
+        <div id="engineer-grid-container" class="grid-canvas-container glass-card">
+          <div class="card-header grid-header">
+            <div class="header-left">
+              <span class="panel-tag">PWR-01</span>
+              <span class="panel-title">10x10 POWER CONDUIT MATRIX</span>
+            </div>
+            <div class="header-right">
+              <span id="eng-drone-bay-status" class="status-pill nominal">DRONE BAY: ACTIVE</span>
+            </div>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="engineer-grid-canvas" width="760" height="760"></canvas>
+          </div>
+          <div class="grid-controls-tip">
+            <span>Click / tap conduit to rotate 90° clockwise · Reactor & Coolant never cross · Disconnecting systems boosts remaining share up to 100% · Use BOOST toggles for up to 120% output</span>
+          </div>
+        </div>
+
+        <!-- Engineering Side Telemetry & Drone Management -->
+        <aside class="engineer-sidebar">
+          <!-- Reactor Zero-Waste Power Pool Card -->
+          <div class="engineer-telemetry glass-card">
+            <div class="card-header">
+              <span class="panel-tag">PWR-02</span>
+              <span class="panel-title">REACTOR DISTRIBUTION</span>
+            </div>
+            <div class="telemetry-row">
+              <span class="t-label">RESOURCE POOLS:</span>
+              <span id="eng-reactor-cap" class="t-val highlight-cyan">8.0 PWR / 8.0 COL</span>
+            </div>
+            <div class="telemetry-row">
+              <span class="t-label">CONNECTED SYSTEMS:</span>
+              <span id="eng-connected-count" class="t-val highlight-amber">P:11/11 · C:11/11</span>
+            </div>
+            <div class="telemetry-row">
+              <span class="t-label">POWER SHARE / NODE:</span>
+              <span id="eng-power-per-node" class="t-val highlight-cyan">73%</span>
+            </div>
+            <div class="telemetry-row">
+              <span class="t-label">COOLANT SHARE:</span>
+              <span id="eng-coolant-share" class="t-val highlight-green">73%</span>
+            </div>
+          </div>
+
+          <!-- System Power & Boost Overcharge Panel -->
+          <div id="eng-system-boost-panel" class="system-boost-panel glass-card">
+            <div class="card-header">
+              <span class="panel-tag">PWR-03</span>
+              <span class="panel-title">SYSTEM POWER & BOOST</span>
+            </div>
+            <div id="eng-system-boost-list" class="system-boost-list">
+              <div class="system-boost-row" data-subsystem="sas_computer">
+                <div class="sys-boost-meta">
+                  <span class="sys-boost-name">SAS COMPUTER</span>
+                  <span class="sys-boost-readouts">
+                    <span class="sys-pwr-val">P:73%</span>
+                    <span class="sys-col-val">C:73%</span>
+                  </span>
+                </div>
+                <button class="btn-boost-system" data-subsystem="sas_computer" type="button" aria-pressed="false">BOOST</button>
+              </div>
+              <div class="system-boost-row" data-subsystem="shields_fore">
+                <div class="sys-boost-meta">
+                  <span class="sys-boost-name">FORE SHIELDS</span>
+                  <span class="sys-boost-readouts">
+                    <span class="sys-pwr-val">P:73%</span>
+                    <span class="sys-col-val">C:73%</span>
+                  </span>
+                </div>
+                <button class="btn-boost-system" data-subsystem="shields_fore" type="button" aria-pressed="false">BOOST</button>
+              </div>
+              <div class="system-boost-row" data-subsystem="rcs_thrusters">
+                <div class="sys-boost-meta">
+                  <span class="sys-boost-name">RCS THRUSTERS</span>
+                  <span class="sys-boost-readouts">
+                    <span class="sys-pwr-val">P:73%</span>
+                    <span class="sys-col-val">C:73%</span>
+                  </span>
+                </div>
+                <button class="btn-boost-system" data-subsystem="rcs_thrusters" type="button" aria-pressed="false">BOOST</button>
+              </div>
+              <div class="system-boost-row" data-subsystem="shields_aft">
+                <div class="sys-boost-meta">
+                  <span class="sys-boost-name">AFT SHIELDS</span>
+                  <span class="sys-boost-readouts">
+                    <span class="sys-pwr-val">P:73%</span>
+                    <span class="sys-col-val">C:73%</span>
+                  </span>
+                </div>
+                <button class="btn-boost-system" data-subsystem="shields_aft" type="button" aria-pressed="false">BOOST</button>
+              </div>
+              <div class="system-boost-row" data-subsystem="main_drive">
+                <div class="sys-boost-meta">
+                  <span class="sys-boost-name">MAIN DRIVE</span>
+                  <span class="sys-boost-readouts">
+                    <span class="sys-pwr-val">P:73%</span>
+                    <span class="sys-col-val">C:73%</span>
+                  </span>
+                </div>
+                <button class="btn-boost-system" data-subsystem="main_drive" type="button" aria-pressed="false">BOOST</button>
+              </div>
+              <div class="system-boost-row" data-subsystem="weapons_torpedo">
+                <div class="sys-boost-meta">
+                  <span class="sys-boost-name">TORPEDO TUBES</span>
+                  <span class="sys-boost-readouts">
+                    <span class="sys-pwr-val">P:73%</span>
+                    <span class="sys-col-val">C:73%</span>
+                  </span>
+                </div>
+                <button class="btn-boost-system" data-subsystem="weapons_torpedo" type="button" aria-pressed="false">BOOST</button>
+              </div>
+              <div class="system-boost-row" data-subsystem="shields_port">
+                <div class="sys-boost-meta">
+                  <span class="sys-boost-name">PORT SHIELDS</span>
+                  <span class="sys-boost-readouts">
+                    <span class="sys-pwr-val">P:73%</span>
+                    <span class="sys-col-val">C:73%</span>
+                  </span>
+                </div>
+                <button class="btn-boost-system" data-subsystem="shields_port" type="button" aria-pressed="false">BOOST</button>
+              </div>
+              <div class="system-boost-row" data-subsystem="weapons_laser">
+                <div class="sys-boost-meta">
+                  <span class="sys-boost-name">PULSE LASERS</span>
+                  <span class="sys-boost-readouts">
+                    <span class="sys-pwr-val">P:73%</span>
+                    <span class="sys-col-val">C:73%</span>
+                  </span>
+                </div>
+                <button class="btn-boost-system" data-subsystem="weapons_laser" type="button" aria-pressed="false">BOOST</button>
+              </div>
+              <div class="system-boost-row" data-subsystem="hyperspace">
+                <div class="sys-boost-meta">
+                  <span class="sys-boost-name">HYPERSPACE DRIVE</span>
+                  <span class="sys-boost-readouts">
+                    <span class="sys-pwr-val">P:73%</span>
+                    <span class="sys-col-val">C:73%</span>
+                  </span>
+                </div>
+                <button class="btn-boost-system" data-subsystem="hyperspace" type="button" aria-pressed="false">BOOST</button>
+              </div>
+              <div class="system-boost-row" data-subsystem="shields_starboard">
+                <div class="sys-boost-meta">
+                  <span class="sys-boost-name">STARBOARD SHIELDS</span>
+                  <span class="sys-boost-readouts">
+                    <span class="sys-pwr-val">P:73%</span>
+                    <span class="sys-col-val">C:73%</span>
+                  </span>
+                </div>
+                <button class="btn-boost-system" data-subsystem="shields_starboard" type="button" aria-pressed="false">BOOST</button>
+              </div>
+              <div class="system-boost-row" data-subsystem="weapons_railgun">
+                <div class="sys-boost-meta">
+                  <span class="sys-boost-name">RAILGUN</span>
+                  <span class="sys-boost-readouts">
+                    <span class="sys-pwr-val">P:73%</span>
+                    <span class="sys-col-val">C:73%</span>
+                  </span>
+                </div>
+                <button class="btn-boost-system" data-subsystem="weapons_railgun" type="button" aria-pressed="false">BOOST</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Repair Drone Fleet Cards -->
+          <div class="drone-deck glass-card">
+            <div class="card-header">
+              <span class="panel-tag">ENG-03</span>
+              <span class="panel-title">REPAIR DRONE FLEET</span>
+            </div>
+            <div id="drone-list-container" class="drone-cards-list">
+              <!-- Dynamically populated drone status cards -->
+            </div>
+          </div>
+
+          <!-- Subsystem Hardware Repair Target Buttons -->
+          <div id="eng-repair-targets" class="subsystem-repairs glass-card">
+            <div class="card-header">
+              <span class="panel-tag">ENG-04</span>
+              <span class="panel-title">HARDWARE REPAIR TARGETS</span>
+            </div>
+            <div id="eng-subsystem-repair-list" class="repair-btn-list">
+              <button class="btn-repair-target" data-subsystem="main_drive" type="button">MAIN DRIVE</button>
+              <button class="btn-repair-target" data-subsystem="rcs_thrusters" type="button">RCS THRUSTERS</button>
+              <button class="btn-repair-target" data-subsystem="sas_computer" type="button">SAS / VIEW STAB</button>
+              <button class="btn-repair-target" data-subsystem="shields_fore" type="button">FORE SHIELDS</button>
+              <button class="btn-repair-target" data-subsystem="weapons_laser" type="button">PULSE LASERS</button>
+              <button class="btn-repair-target" data-subsystem="weapons_railgun" type="button">RAILGUN</button>
+              <button class="btn-repair-target" data-subsystem="hyperspace" type="button">HYPER</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <!-- LOBBY & DRYDOCK MODAL OVERLAY -->
+  <div id="lobby-overlay" class="modal-overlay active" role="dialog" aria-modal="true" aria-labelledby="lobby-title">
+    <div class="modal-window glass-card">
+      <div class="modal-header">
+        <div>
+          <span class="panel-tag">DRYDOCK STATION ACCESS</span>
+          <h2 id="lobby-title" class="modal-title">TACTICAL COMMAND & FLEET OUTFITTING</h2>
+        </div>
+        <div class="modal-header-actions">
+          <button id="btn-install-app" class="btn-hud-action btn-install-app hidden" type="button">INSTALL APP</button>
+          <button id="btn-close-lobby" class="btn-close-modal" type="button" aria-label="Close Lobby">GO TO STATION</button>
+        </div>
+      </div>
+
+      <!-- Player Callsign Identification -->
+      <div class="callsign-bar">
+        <label for="player-name-input" class="callsign-label">PLAYER CALLSIGN:</label>
+        <input type="text" id="player-name-input" class="input-text" placeholder="Commander" maxlength="16" value="Commander">
+      </div>
+
+      <div id="ios-install-hint" class="ios-install-hint hidden" role="note">
+        <span class="ios-hint-text">INSTALL APP ON IPAD / IPHONE: TAP SAFARI SHARE, THEN ADD TO HOME SCREEN</span>
+        <button id="btn-dismiss-ios-hint" class="btn-dismiss-hint" type="button">DISMISS</button>
+      </div>
+
+      <!-- Dual Team Stations & Drydock Cards -->
+      <div class="teams-container">
+        <!-- TEAM ALPHA CARD -->
+        <div class="team-card alpha-team-card">
+          <div class="team-card-header">
+            <h3 class="team-title text-team-alpha">UNS HYPERION (ALPHA)</h3>
+            <span class="team-badge badge-alpha">TERRAN SECTOR COMMAND</span>
+          </div>
+
+          <!-- Station Assignment Buttons -->
+          <div class="station-slots">
+            <button class="btn-station-slot" data-team="alpha" data-station="helm" type="button">
+              <span class="slot-role">HELM</span>
+              <span class="slot-occupant">UNASSIGNED (AI)</span>
+            </button>
+            <button class="btn-station-slot" data-team="alpha" data-station="weapons" type="button">
+              <span class="slot-role">WEAPONS</span>
+              <span class="slot-occupant">UNASSIGNED (AI)</span>
+            </button>
+            <button class="btn-station-slot" data-team="alpha" data-station="engineer" type="button">
+              <span class="slot-role">ENGINEER</span>
+              <span class="slot-occupant">UNASSIGNED (AI)</span>
+            </button>
+          </div>
+
+          <!-- Team Alpha Drydock Customizer -->
+          <div class="drydock-options">
+            <div class="drydock-row">
+              <label for="alpha-hull-select">HULL CLASS:</label>
+              <select id="alpha-hull-select" class="select-box">
+                <option value="corvette">CORVETTE (FAST / 600 HP)</option>
+                <option value="frigate" selected>FRIGATE (BALANCED / 1000 HP)</option>
+                <option value="dreadnought">DREADNOUGHT (HEAVY / 1800 HP)</option>
+              </select>
+            </div>
+            <div class="drydock-row">
+              <label for="alpha-mod-helm">HELM MODULE:</label>
+              <select id="alpha-mod-helm" class="select-box">
+                <option value="overdrive_rcs" selected>OVERDRIVE RCS (+35% THRUST)</option>
+                <option value="reinforced_prow">REINFORCED PROW (+150% RAM DAMAGE)</option>
+                <option value="reaction_wheel">REACTION WHEEL (INTERNAL TORQUE)</option>
+              </select>
+            </div>
+            <div class="drydock-row">
+              <label for="alpha-mod-weapons">WEAPONS MODULE:</label>
+              <select id="alpha-mod-weapons" class="select-box">
+                <option value="heavy_torpedoes" selected>HEAVY TORPEDOES (400 DMG)</option>
+                <option value="emp_torpedoes">EMP TORPEDOES (GRID BLACKOUT)</option>
+                <option value="swarm_missiles">SWARM MISSILES (16 MISSILES)</option>
+              </select>
+            </div>
+            <div class="drydock-row">
+              <label for="alpha-mod-engineer">ENGINEER MODULE:</label>
+              <select id="alpha-mod-engineer" class="select-box">
+                <option value="standard_drones" selected>STANDARD DRONES (3 DRONES)</option>
+                <option value="turbo_drones">TURBO DRONES (2 HIGH-SPEED)</option>
+                <option value="capacitor_batteries">CAPACITOR BATTERIES (+2.0 POOL SURGE)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- TEAM OMEGA CARD -->
+        <div class="team-card omega-team-card">
+          <div class="team-card-header">
+            <h3 class="team-title text-team-omega">KRS VANGUARD (OMEGA)</h3>
+            <span class="team-badge badge-omega">KORATH COMBAT FLOTILLA</span>
+          </div>
+
+          <!-- Station Assignment Buttons -->
+          <div class="station-slots">
+            <button class="btn-station-slot" data-team="omega" data-station="helm" type="button">
+              <span class="slot-role">HELM</span>
+              <span class="slot-occupant">UNASSIGNED (AI)</span>
+            </button>
+            <button class="btn-station-slot" data-team="omega" data-station="weapons" type="button">
+              <span class="slot-role">WEAPONS</span>
+              <span class="slot-occupant">UNASSIGNED (AI)</span>
+            </button>
+            <button class="btn-station-slot" data-team="omega" data-station="engineer" type="button">
+              <span class="slot-role">ENGINEER</span>
+              <span class="slot-occupant">UNASSIGNED (AI)</span>
+            </button>
+          </div>
+
+          <!-- Team Omega Drydock Customizer -->
+          <div class="drydock-options">
+            <div class="drydock-row">
+              <label for="omega-hull-select">HULL CLASS:</label>
+              <select id="omega-hull-select" class="select-box">
+                <option value="corvette">CORVETTE (FAST / 600 HP)</option>
+                <option value="frigate" selected>FRIGATE (BALANCED / 1000 HP)</option>
+                <option value="dreadnought">DREADNOUGHT (HEAVY / 1800 HP)</option>
+              </select>
+            </div>
+            <div class="drydock-row">
+              <label for="omega-mod-helm">HELM MODULE:</label>
+              <select id="omega-mod-helm" class="select-box">
+                <option value="overdrive_rcs" selected>OVERDRIVE RCS (+35% THRUST)</option>
+                <option value="reinforced_prow">REINFORCED PROW (+150% RAM DAMAGE)</option>
+                <option value="reaction_wheel">REACTION WHEEL (INTERNAL TORQUE)</option>
+              </select>
+            </div>
+            <div class="drydock-row">
+              <label for="omega-mod-weapons">WEAPONS MODULE:</label>
+              <select id="omega-mod-weapons" class="select-box">
+                <option value="heavy_torpedoes" selected>HEAVY TORPEDOES (400 DMG)</option>
+                <option value="emp_torpedoes">EMP TORPEDOES (GRID BLACKOUT)</option>
+                <option value="swarm_missiles">SWARM MISSILES (16 MISSILES)</option>
+              </select>
+            </div>
+            <div class="drydock-row">
+              <label for="omega-mod-engineer">ENGINEER MODULE:</label>
+              <select id="omega-mod-engineer" class="select-box">
+                <option value="standard_drones" selected>STANDARD DRONES (3 DRONES)</option>
+                <option value="turbo_drones">TURBO DRONES (2 HIGH-SPEED)</option>
+                <option value="capacitor_batteries">CAPACITOR BATTERIES (+2.0 POOL SURGE)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Match Launch & AI Controls -->
+      <div class="lobby-footer">
+        <label class="toggle-control">
+          <input type="checkbox" id="toggle-ai-bots" checked>
+          <span class="toggle-switch"></span>
+          <span class="toggle-text">AI AUTO-CREW BOTS (MAN UNATTENDED STATIONS)</span>
+        </label>
+        <div class="lobby-action-buttons">
+          <button id="btn-restart-match" class="btn-lobby-secondary" type="button">RESTART MATCH</button>
+          <button id="btn-start-match" class="btn-lobby-primary" type="button">LAUNCH MATCH</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT ENTRYPOINT -->
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

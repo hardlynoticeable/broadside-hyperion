@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>BROADSIDE HYPERION — Cinematic Spectator View</title>
+  <meta name="theme-color" content="#0b0f19">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HYPERION">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-180.png">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .replay-hud-banner {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      z-index: 60;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 14px;
+      border-radius: 4px;
+      font-family: var(--font-mono, monospace);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      background: rgba(245, 158, 11, 0.25);
+      border: 1px solid var(--color-warning, #f59e0b);
+      color: #fbbf24;
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.35);
+      animation: pulseWarning 1s infinite alternate;
+    }
+    #spectate-kill-cam:not(.hidden) ~ #spectate-replay-banner {
+      top: 56px;
+    }
+    .replay-hud-banner.hidden {
+      display: none !important;
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/vendor/three.module.js"
+    }
+  }
+  </script>
+</head>
+<body class="theme-dark spectator-view">
+
+  <!-- FULLSCREEN BROADCAST CANVAS VIEWPORT -->
+  <main id="spectate-viewport" class="tactical-viewport">
+    <canvas id="space-canvas"></canvas>
+
+    <div class="spectate-corner-stack">
+      <div id="spectate-hud-corner" class="spectate-floating-corner">
+        <div id="spectate-match-status" class="match-status-pill">
+          <span class="status-indicator"></span>
+          <span class="status-label">LOBBY / STANDBY</span>
+        </div>
+        <button id="btn-spectate-start" class="btn-hud-action btn-demo-start" type="button">
+          START / DEMO AI MATCH
+        </button>
+        <button id="btn-install-app" class="btn-hud-action btn-install-app hidden" type="button">
+          INSTALL APP
+        </button>
+      </div>
+      <div id="ios-install-hint" class="ios-install-hint ios-install-hint-spectate hidden" role="note">
+        <span class="ios-hint-text">INSTALL APP ON IPAD / IPHONE: TAP SAFARI SHARE, THEN ADD TO HOME SCREEN</span>
+        <button id="btn-dismiss-ios-hint" class="btn-dismiss-hint" type="button">DISMISS</button>
+      </div>
+    </div>
+
+    <div id="spectate-kill-cam" class="alert-banner kill-cam-banner spectate-kill-banner hidden" role="alert">
+      KILLING BLOW — 5X TIME DILATION
+    </div>
+    <div id="spectate-replay-banner" class="replay-hud-banner hidden">INSTANT REPLAY — FINAL IMPACT</div>
+    <div id="spectate-victor-overlay" class="spectate-victor-overlay hidden" role="status" aria-live="assertive">
+      <div id="spectate-victor-banner" class="spectate-victor-banner">
+        <div class="victor-kicker">SECTOR ENGAGEMENT CONCLUDED</div>
+        <h1 id="spectate-victor-title" class="victor-title">VICTOR: UNS HYPERION</h1>
+        <div id="spectate-victor-subtitle" class="victor-subtitle">TEAM ALPHA DOMINATES THE ARENA</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- SPECTATOR SCRIPT ENTRYPOINT -->
+  <script type="module" src="/js/spectator.js"></script>
+</body>
+</html>

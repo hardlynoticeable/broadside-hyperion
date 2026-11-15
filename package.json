@@ -1,0 +1,22 @@
+{
+  "name": "broadside-hyperion",
+  "version": "1.0.0",
+  "description": "BROADSIDE HYPERION — Realistic Physics LAN Party Starship Combat Game",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "start:https": "node src/index.js --https",
+    "dev": "node --watch src/index.js",
+    "test": "vitest run",
+    "generate:icons": "node scripts/generate-icons.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "three": "^0.187.0",
+    "ws": "^8.18.2"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}
